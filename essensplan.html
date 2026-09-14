@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2563eb">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Essensplan">
+<link rel="manifest" href="manifest.json">
+<title>Essensplan</title>
+<style>
+:root{--bg:#f4f6f8;--card:#fff;--text:#18212b;--muted:#66717d;--accent:#2563eb;--ok:#16a34a;--border:#e3e7eb}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--text)}
+header{background:var(--accent);color:white;padding:24px 18px}header h1{margin:0 0 6px;font-size:28px}header p{margin:0;opacity:.9}
+main{max-width:950px;margin:auto;padding:18px}
+nav{display:flex;gap:8px;overflow:auto;margin-bottom:16px}nav button{white-space:nowrap;border:0;border-radius:12px;padding:11px 15px;background:white;color:var(--text);cursor:pointer}nav button.active{background:var(--accent);color:white}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:16px;box-shadow:0 2px 8px #00000008}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}.stat{padding:16px;border-radius:14px;background:#f8fafc}.stat b{display:block;font-size:25px;margin-top:4px}
+h2{margin-top:0}h3{margin-bottom:7px}.muted{color:var(--muted)}.meal{border:1px solid var(--border);border-radius:13px;padding:14px;margin:10px 0}.meal strong{font-size:17px}.meal p{margin:6px 0}
+input,select{width:100%;padding:11px;border:1px solid #ccd3da;border-radius:10px;font-size:16px;margin-top:5px}
+button.primary{background:var(--accent);color:white;border:0;border-radius:10px;padding:11px 15px;cursor:pointer;margin-top:10px}
+button.secondary{background:#eef2f7;border:0;border-radius:10px;padding:10px 13px;cursor:pointer}
+.row{display:flex;gap:10px;align-items:end;flex-wrap:wrap}.row>div{flex:1;min-width:160px}
+.check{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)}.check input{width:auto;margin:0}
+.progress{height:12px;background:#e8edf2;border-radius:99px;overflow:hidden}.bar{height:100%;background:var(--ok);width:0}
+table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:10px;border-bottom:1px solid var(--border)}
+.hidden{display:none}.pill{display:inline-block;padding:5px 9px;border-radius:999px;background:#eef2ff;color:#1e40af;font-size:13px}
+footer{color:var(--muted);text-align:center;padding:25px;font-size:13px}
+</style>
+</head>
+<body>
+<header><h1>🍽️ Essensplan</h1><p>2.000 kcal · 150–170 g Protein · Schichtarbeit</p></header>
+<main>
+<div style="max-width:950px;margin:12px auto 0;padding:0 18px"><button id="installBtn" class="primary" style="display:none">📲 App installieren</button></div>
+<nav>
+<button class="active" onclick="show('heute',this)">Heute</button>
+<button onclick="show('plan',this)">Schichtplan</button>
+<button onclick="show('rezepte',this)">Rezepte</button>
+<button onclick="show('kuehlschrank',this)">🧊 Kühlschrank</button>
+<button onclick="show('einkauf',this)">🛒 Einkauf</button>
+<button onclick="show('gewicht',this)">Gewicht</button>
+</nav>
+
+<section id="heute">
+<div class="card">
+<h2>📅 Heute</h2>
+<div class="row"><div><label>Schicht</label><select id="shift" onchange="saveShift()">
+<option>Freier Tag</option><option>Nachtschicht 8 h</option><option>Nachtschicht 12 h</option><option>Frühschicht</option><option>Spätschicht</option>
+</select></div><div><label>Datum</label><input id="date" type="date"></div></div>
+</div>
+<div class="grid">
+<div class="stat">Kalorienziel<b>2.000 kcal</b></div>
+<div class="stat">Protein<b>150–170 g</b></div>
+<div class="stat">Spaziergang<b>bis 90 min</b></div>
+</div>
+<div class="card"><h2>🍽️ Tagesplan</h2><div id="meals"></div>
+<p class="muted">Die Mengen sind Richtwerte. Bei Markenprodukten können Kalorien leicht abweichen.</p></div>
+<div class="card"><h2>🚶 Bewegung</h2>
+<label>Spaziergang: <span id="walkVal">0</span> Minuten</label>
+<input id="walk" type="range" min="0" max="120" value="0" oninput="walkVal.textContent=this.value;localStorage.walk=this.value">
+<div class="progress" style="margin-top:12px"><div class="bar" id="walkBar"></div></div>
+</div>
+</section>
+
+<section id="plan" class="hidden">
+<div class="card"><h2>🌙 Dein Schicht-Rhythmus</h2>
+<table><tr><th>Tag</th><th>Plan</th></tr>
+<tr><td>Frei</td><td>Normaler Tagesrhythmus, ca. 2.000 kcal</td></tr>
+<tr><td>Früh</td><td>Kein Frühstück nötig, wenn du keinen Hunger hast. Große Mahlzeit nach Feierabend.</td></tr>
+<tr><td>Spät</td><td>Frühstück → Mittag → Essen während der Schicht → kleiner Snack</td></tr>
+<tr><td>Nacht 8 h</td><td>Nach Aufstehen essen → Spaziergang → große Mahlzeit → Box in der Nacht</td></tr>
+<tr><td>Nacht 12 h</td><td>Wie 8 h, aber zusätzliche Mahlzeit/Snack für die lange Schicht</td></tr>
+</table></div>
+<div class="card"><h2>😴 Nachtschicht-Tipp</h2><p>Den längeren Spaziergang am besten nach dem Aufstehen machen. Nach der Schicht nur noch kurz bewegen, wenn du möchtest, und dann schlafen.</p></div>
+</section>
+
+<section id="rezepte" class="hidden">
+<div class="card"><h2>🍲 Meine Rezepte</h2>
+<div id="recipes"></div>
+</div></section>
+
+<section id="einkauf" class="hidden">
+<div class="card"><h2>🛒 Einkaufsliste</h2><p class="muted">Die Liste ist leer, bis du im Kühlschrank bei einem Artikel „Auf Einkauf“ auswählst. Die dort eingetragene Menge wird automatisch übernommen.</p><div id="shopping"></div></div>
+</section>
+<section id="kuehlschrank" class="hidden">
+<div class="card">
+<h2>🧊 Kühlschrank & Vorräte</h2>
+<p class="muted">Hier trägst du die Mengen ein, die du aktuell zuhause hast. Wenn du etwas verbrauchst, ziehst du die Menge einfach ab. Was auf 0 ist, kannst du anschließend in die Einkaufsliste übernehmen.</p>
+<div id="fridge"></div>
+</div>
+<div class="card">
+<h2>➕ Vorrat hinzufügen</h2>
+<div class="row">
+<div><label>Lebensmittel</label><input id="newFood" placeholder="z. B. Hähnchen"></div>
+<div><label>Menge</label><input id="newQty" placeholder="z. B. 500 g"></div>
+<div><button class="primary" onclick="addFood()">Hinzufügen</button></div>
+</div>
+</div>
+</section>
+
+<section id="gewicht" class="hidden">
+<div class="card"><h2>⚖️ Gewicht</h2>
+<div class="row"><div><label>Datum</label><input id="wdate" type="date"></div><div><label>Gewicht (kg)</label><input id="weight" type="number" step=".1" placeholder="120.0"></div><div><button class="primary" onclick="addWeight()">Eintragen</button></div></div>
+<div id="weights" style="margin-top:16px"></div></div>
+</section>
+<footer>Deine Daten werden nur in diesem Browser gespeichert (localStorage).</footer>
+</main>
+<script>
+const plans={
+"Freier Tag":[
+["🍳 Frühstück","3 Eier · 2 Scheiben Brot · 100 g Hähnchenaufschnitt · Tomate/Gurke","ca. 500 kcal · 40–45 g Protein"],
+["🍗 Mittag","200 g Hähnchen · 80 g Reis trocken · 250–300 g Paprika/Möhren · 10 g Öl","ca. 650 kcal · ~50 g Protein"],
+["🍮 Snack","1 Proteinpudding · 150 g Beeren · optional Banane","ca. 200–300 kcal"],
+["🍝 Abend","200 g Rinderhack · 70 g Fusilli trocken · 200 g passierte Tomaten · 150–200 g Gemüse · 20 g Cheddar","ca. 600 kcal"]
+],
+"Nachtschicht 8 h":[
+["🍳 Nach dem Aufstehen","3 Eier · 2 Scheiben Brot · 100 g Hähnchenaufschnitt · Gemüse","ca. 500–550 kcal"],
+["🍗 Vor der Arbeit","200 g Hähnchen · 250 g gekochter Reis · 300 g Gemüse · 10 g Öl","ca. 650 kcal"],
+["🌙 In der Nacht","2 Scheiben Brot · 30 g Cheddar · Gemüse · 100 g Puten-/Hähnchenaufschnitt","ca. 400 kcal"],
+["🍮 Snack","Protein-Joghurt oder Proteinpudding · 1 Banane","ca. 250–300 kcal"]
+],
+"Nachtschicht 12 h":[
+["🍳 Nach dem Aufstehen","3 Eier · 2 Scheiben Brot · 100 g Aufschnitt · Gemüse · 1 Banane","ca. 600 kcal"],
+["🍗 Vor der Arbeit","200 g Hähnchen · 250 g gekochter Reis · 300 g Gemüse · 10 g Öl","ca. 650 kcal"],
+["🌯 In der Nacht","2 Wraps · 100 g Hähnchen · Salat/Tomate/Gurke · 30 g Cheddar · etwas Sauce","ca. 500 kcal"],
+["🍮 Später Snack","Protein-Joghurt oder Proteinpudding · Beeren","ca. 200–250 kcal"]
+],
+"Frühschicht":[
+["☕ Vor der Arbeit","Nichts nötig, wenn du keinen Hunger hast. Wasser/Kaffee/Zero.","0–100 kcal"],
+["🍗 Nach der Arbeit","250 g Hähnchen · 300–400 g Kartoffeln · 300 g Gemüse · 10 g Öl","ca. 650–750 kcal"],
+["🥪 Nachmittag","2–3 Scheiben Brot · 2 Eier · Aufschnitt · Gemüse · Obst","ca. 500 kcal"],
+["🍝 Abend","Hack-Nudeln oder Hähnchen-Wraps · Proteinpudding/Joghurt nach Hunger","ca. 600–750 kcal"]
+],
+"Spätschicht":[
+["🍳 Frühstück","3 Eier · 2 Scheiben Brot · Aufschnitt · Gemüse","ca. 500 kcal"],
+["🥔 Mittag","200 g Hähnchen · 300–400 g Kartoffeln · Gemüse · 10 g Öl","ca. 650 kcal"],
+["🌙 Auf Arbeit","2 Wraps mit Hähnchen, Salat, Tomate, Gurke und etwas Käse/Sauce","ca. 600 kcal"],
+["🍮 Nach der Arbeit","Protein-Joghurt oder Proteinpudding + Obst","ca. 200–250 kcal"]
+]};
+
+const recipes=[
+["🍗 Hähnchen-Reis-Bowl","200 g Hähnchen · 250 g gekochter Reis · 300 g Paprika/Möhren · 10 g Öl","~600–650 kcal · ~50 g Protein",
+"1. Reis nach Packungsanleitung kochen.\n2. Hähnchen in mundgerechte Stücke schneiden und mit Paprika, Salz und Pfeffer würzen.\n3. 10 g Öl in einer Pfanne erhitzen und Hähnchen rundherum gut durchbraten.\n4. Paprika und Möhren dazugeben und 5–8 Minuten mitbraten.\n5. Reis unterheben oder separat in die Box geben.\n6. Nach Geschmack etwas Knoblauchsoße dazu."],
+["🌯 Chicken-Wraps","2 Wraps · 200 g Hähnchen · 30 g Cheddar · Salat · Tomate · Gurke · etwas Knoblauchsoße","~650–700 kcal · ~50 g Protein",
+"1. Hähnchen würzen, klein schneiden und in der Pfanne vollständig durchbraten.\n2. Salat, Tomate und Gurke klein schneiden.\n3. Wraps kurz erwärmen.\n4. Hähnchen, Gemüse und Cheddar auf die Wraps verteilen.\n5. Etwas Knoblauchsoße dazugeben.\n6. Seiten einklappen und fest aufrollen. Für die Arbeit in Alufolie oder eine Box packen."],
+["🍝 Hack-Tomaten-Fusilli","200 g mageres Hack · 80 g Fusilli trocken · 200 g passierte Tomaten · Gemüse · 15–20 g Käse","~650–750 kcal · ~45–50 g Protein",
+"1. Fusilli nach Packungsanleitung kochen.\n2. Hackfleisch in einer beschichteten Pfanne krümelig braten.\n3. Paprika/Möhren klein schneiden und dazugeben.\n4. Passierte Tomaten einrühren und 8–10 Minuten köcheln lassen.\n5. Mit Salz, Pfeffer, Paprika, Knoblauch und italienischen Kräutern würzen.\n6. Nudeln unterheben und Käse darübergeben."],
+["🥔 Hack-Kartoffel-Pfanne","200 g Hack · 400 g Kartoffeln · 250–300 g Paprika/Möhren · 10 g Öl · 30 g Cheddar","~700–750 kcal · ~45 g Protein",
+"1. Kartoffeln schälen oder gründlich waschen und in kleine Würfel schneiden.\n2. Kartoffeln mit 10 g Öl in einer großen Pfanne bei mittlerer Hitze anbraten.\n3. Hack dazugeben und krümelig braten.\n4. Paprika und Möhren hinzufügen.\n5. Mit Deckel weitere 8–12 Minuten garen, bis die Kartoffeln weich sind.\n6. Würzen und Cheddar am Ende darübergeben und schmelzen lassen."],
+["🍔 Chicken-Burger","200 g Hähnchen · 1 Burgerbrötchen · 30 g Cheddar · Salat/Tomate/Gurke · Ketchup · 250 g Kartoffeln","~700–800 kcal · ~50 g Protein",
+"1. Kartoffeln in Spalten schneiden, würzen und im Ofen oder Airfryer knusprig backen.\n2. Hähnchen flach schneiden, würzen und in der Pfanne vollständig durchbraten.\n3. Burgerbrötchen kurz aufbacken oder toasten.\n4. Unterseite mit Ketchup/Soße bestreichen.\n5. Salat, Tomate, Hähnchen und Cheddar darauflegen.\n6. Brötchen schließen und mit den Kartoffelspalten servieren."],
+["🌮 Hack-Wraps","200 g Hack · 2 kleine Wraps · 100 g Mais · 100 g Kidneybohnen · Salat/Tomate · etwas Käse · Salsa","~650–750 kcal · ~40–50 g Protein",
+"1. Hackfleisch in einer Pfanne krümelig und vollständig durchbraten.\n2. Mit Taco-/Chili-Gewürz, Salz und Pfeffer würzen.\n3. Mais und abgetropfte Kidneybohnen kurz unterrühren.\n4. Wraps erwärmen.\n5. Salat und Tomate darauf verteilen.\n6. Hackmischung, etwas Käse und Salsa daraufgeben.\n7. Wraps fest zusammenrollen."]
+];
+
+const shop=[];
+
+function show(id,btn){document.querySelectorAll('section').forEach(x=>x.classList.add('hidden'));document.getElementById(id).classList.remove('hidden');document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));btn.classList.add('active')}
+function renderMeals(){let s=document.getElementById('shift').value;document.getElementById('meals').innerHTML=plans[s].map(x=>`<div class="meal"><strong>${x[0]}</strong><p>${x[1]}</p><span class="pill">${x[2]}</span></div>`).join('')}
+function saveShift(){localStorage.shift=shift.value;renderMeals()}
+function renderRecipes(){
+ recipesEl=document.getElementById('recipes');
+ recipesEl.innerHTML=recipes.map((x,i)=>`<div class="meal">
+ <strong>${x[0]}</strong>
+ <p>${x[1]}</p>
+ <span class="pill">${x[2]}</span>
+ <details style="margin-top:12px">
+   <summary style="cursor:pointer;font-weight:600">👨‍🍳 Zubereitung anzeigen</summary>
+   <p style="white-space:pre-line;margin-top:10px">${x[3]}</p>
+ </details>
+ </div>`).join('')
+}
+const defaultFridge=[
+["Hähnchenbrust","1,2 kg"],["Rinderhack","800 g"],["Eier","10 Stück"],["Hähnchen-/Putenaufschnitt","100 g"],["Cheddar/Käse","200 g"],["Protein-Joghurt","500 g"],["Protein-Puddings","mehrere Stück"],["Milch","vorhandene Menge"],["Kartoffeln","2,5 kg"],["Reis","vorhandene Menge"],["Fusilli/Nudeln","vorhandene Menge"],["Wraps","vorhandene Menge"],["Burgerbrötchen","vorhandene Menge"],["Brot","vorhandene Menge"],["Paprika","1 kg"],["Möhren","1 kg"],["Gurken","vorhandene Menge"],["Tomaten","ca. 1 kg"],["Eisbergsalat","1 Stück"],["Mais","vorhandene Menge"],["Kidneybohnen","2 Dosen"],["Beeren","750 g"],["Bananen","vorhandene Menge"],["Passierte Tomaten","vorhandene Menge"],["Knoblauchsoße","vorhandene Menge"],["Ketchup","vorhandene Menge"]
+];
+function renderFridge(){
+ let a=JSON.parse(localStorage.fridge||'null');
+ if(!a){a=defaultFridge.map(x=>({name:x[0],qty:x[1]}));localStorage.fridge=JSON.stringify(a)}
+ document.getElementById('fridge').innerHTML=a.map((x,i)=>`<div class="meal"><div class="row"><div><strong>${x.name}</strong></div><div><label>Menge</label><input value="${x.qty}" onchange="updateFood(${i},this.value)"></div><div><button class="secondary" onclick="toShopping(${i})">Auf Einkauf</button></div></div></div>`).join('')
+}
+function updateFood(i,v){let a=JSON.parse(localStorage.fridge||'[]');a[i].qty=v;localStorage.fridge=JSON.stringify(a)}
+function addFood(){let n=document.getElementById('newFood').value.trim(),q=document.getElementById('newQty').value.trim();if(!n)return;let a=JSON.parse(localStorage.fridge||'[]');a.push({name:n,qty:q||'0'});localStorage.fridge=JSON.stringify(a);document.getElementById('newFood').value='';document.getElementById('newQty').value='';renderFridge()}
+function toShopping(i){
+ let a=JSON.parse(localStorage.fridge||'[]');
+ let s=JSON.parse(localStorage.shop||'[]');
+ if(!s.some(x=>x.name===a[i].name)){
+   s.push({name:a[i].name,qty:a[i].qty,done:false});
+   localStorage.shop=JSON.stringify(s);
+ }
+ renderShop();
+ alert(a[i].name+' wurde mit der vorhandenen Mengenangabe zur Einkaufsliste hinzugefügt.');
+}
+
+function renderShop(){
+ let items=JSON.parse(localStorage.shop||'[]');
+ document.getElementById('shopping').innerHTML=items.length
+ ? items.map((x,i)=>`<div class="check">
+     <label style="display:flex;align-items:center;gap:10px;flex:1;cursor:pointer">
+       <input type="checkbox" ${x.done?'checked':''} onchange="toggleShop(${i},this.checked)">
+       <span>${x.name} — <strong>${x.qty||'Menge nicht angegeben'}</strong></span>
+     </label>
+     <button class="secondary" onclick="removeFromShop(${i})">🗑️ Gekauft / entfernen</button>
+   </div>`).join('')
+ : '<p class="muted">Noch nichts auf der Einkaufsliste. Gehe zum Kühlschrank und tippe bei einem Artikel auf „Auf Einkauf“.</p>';
+}
+function toggleShop(i,v){let a=JSON.parse(localStorage.shop||'[]');a[i].done=v;localStorage.shop=JSON.stringify(a)}
+function removeFromShop(i){
+ let a=JSON.parse(localStorage.shop||'[]');
+ a.splice(i,1);
+ localStorage.shop=JSON.stringify(a);
+ renderShop();
+}
+function addWeight(){let d=document.getElementById('wdate').value,w=parseFloat(document.getElementById('weight').value);if(!d||!w)return;let a=JSON.parse(localStorage.weights||'[]');a.push({d,w});a.sort((x,y)=>x.d.localeCompare(y.d));localStorage.weights=JSON.stringify(a);renderWeights();document.getElementById('weight').value=''}
+function renderWeights(){let a=JSON.parse(localStorage.weights||'[]');document.getElementById('weights').innerHTML=a.length?`<table><tr><th>Datum</th><th>Gewicht</th></tr>${a.map(x=>`<tr><td>${new Date(x.d+'T12:00:00').toLocaleDateString('de-DE')}</td><td>${x.w.toFixed(1)} kg</td></tr>`).join('')}</table>`:'<p class="muted">Noch keine Einträge.</p>'}
+date.value=new Date().toISOString().slice(0,10);wdate.value=date.value;
+shift.value=localStorage.shift||"Freier Tag";walk.value=localStorage.walk||0;walkVal.textContent=walk.value;walkBar.style.width=Math.min(100,walk.value/90*100)+'%';
+renderMeals();renderRecipes();renderShop();renderFridge();renderWeights();
+<script>
+if ('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js'));
+let deferredInstall;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;installBtn.style.display='inline-block'});
+installBtn?.addEventListener('click',async()=>{if(!deferredInstall)return;deferredInstall.prompt();await deferredInstall.userChoice;deferredInstall=null;installBtn.style.display='none'});
+</script>
+</body></html>

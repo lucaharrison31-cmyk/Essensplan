@@ -1,0 +1,9 @@
+{
+  "name": "Essensplan",
+  "short_name": "Essensplan",
+  "start_url": "./essensplan.html",
+  "display": "standalone",
+  "background_color": "#f4f6f8",
+  "theme_color": "#2563eb",
+  "description": "Persönlicher Essens-, Schicht-, Einkaufs- und Gewichtsplan."
+}
